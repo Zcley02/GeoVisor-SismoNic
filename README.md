@@ -1,0 +1,1 @@
+# GeoVisor-SismoNic
