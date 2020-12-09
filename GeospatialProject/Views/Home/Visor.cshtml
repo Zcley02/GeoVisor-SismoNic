@@ -1,0 +1,223 @@
+﻿@model List<GeospatialProject.Models.Sismo>
+
+@{
+    ViewBag.Title = "Visor";
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
+<h2>Visor</h2>
+
+<div id="map" style="margin-bottom: 2em;"></div>
+
+<h3>Tabla de Sismos</h3>
+
+@using (Html.BeginForm("Visor", "Home", FormMethod.Get))
+{
+<table id="sismo" class="bordered listdir datatables super-responsive">
+    <thead>
+        <tr>
+            <th>
+                <strong>Magnitud</strong>
+            </th>
+
+            <th>
+                <strong>Profundidad</strong>
+            </th>
+
+            <th>
+                <strong>Departamento</strong>
+            </th>
+
+            <th>
+                <strong>Año</strong>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.magnitud)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.profundidad)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.departamento)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.anio)
+                </td>
+            </tr>
+        }
+    </tbody>
+
+    </table>
+
+        <input type="hidden" id="coordinates" name="coordinates" />
+        <input type="hidden" id="type" name="type" />
+        <div>
+            <button type="submit" class="btn btn-primary" style="margin: auto;display: block;">Buscar</button>
+        </div>
+    }
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <script>
+        var map = L.map('map').setView([12.136005232925378, -86.297607421875], 7);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        //DEFINICIÓN DE WORKSPACE
+        var url = 'http://localhost:8080/geoserver/ows?';
+
+        //DEFINICIÓN DE CAPAS BASES
+        var terreno_osm = L.tileLayer.provider('Stamen.TerrainBackground', { maxZoom: 14 });
+        var osm_completo = L.tileLayer.provider('OpenStreetMap.Mapnik', { maxZoom: 14 });
+        var satelite_esri = L.tileLayer.provider('Esri.WorldImagery', { maxZoom: 14 });
+
+        //función para mostrar icono en cada capa
+        function iconByName(name) {
+            return '<i class="icon ' + name + '"></i>';
+        }
+
+        //Lista colapsable de capas bases
+        var baseLayers =
+            [
+                {
+                    group: "Capas bases",
+                    collapsed: true,
+                    layers:
+                        [
+                            {
+                                name: "Completo (OSM)",
+                                //icon: iconByName('icon-world'),
+                                layer: osm_completo
+                            },
+                            {
+                                name: "Sat&eacute;lite (ESRI)",
+                                //icon: iconByName('icon-mundo'),
+                                layer: satelite_esri
+                            },
+                            {
+                                name: "Terreno (OSM)",
+                                //icon: iconByName('icon-mundo'),
+                                layer: terreno_osm
+                            },
+                        ]
+                }
+            ];
+
+        var sismo2018 = L.tileLayer.betterWms(url, { layers: 'casoSismos:sismo2018', transparent: true, visible: true, format: 'image/png', maxZoom: 14});
+        var sismo2019 = L.tileLayer.betterWms(url, { layers: 'casoSismos:sismo2019', transparent: true, visible: true, format: 'image/png', maxZoom: 14 });
+        var sismo2020 = L.tileLayer.betterWms(url, { layers: 'casoSismos:sismo2020', transparent: true, visible: true, format: 'image/png', maxZoom: 14 });
+
+        var overLayers = [
+            {
+                group: "Capas",
+                collapsed: true,
+                layers:
+                    [
+                        {
+                            name: "Sismos 2018",
+                            //icon: iconByName('icon-cesta'),
+                            layer: sismo2018
+                        },
+                        {
+                            name: "Sismos 2019",
+                            //icon: iconByName('icon-cesta'),
+                            layer: sismo2019
+                        },
+                        {
+                            name: "Sismos 2020",
+                            //icon: iconByName('icon-cesta'),
+                            layer: sismo2020
+                        }
+                    ]
+            },
+        ];
+
+        map.addLayer(osm_completo);
+
+        var panelLayers = new L.Control.PanelLayers(baseLayers, overLayers,
+            {
+                collapsibleGroups: true,
+                collapsed: true
+            });
+
+        map.addControl(panelLayers);
+
+        // Initialise the FeatureGroup to store editable layers
+        var editableLayers = new L.FeatureGroup();
+        map.addLayer(editableLayers);
+
+        var drawPluginOptions = {
+            position: 'topleft',
+            draw: {
+                rectangle: {
+                    allowIntersection: false, // Restricts shapes to simple polygons
+                    drawError: {
+                        color: '#e1e100', // Color the shape will turn when intersects
+                        message: '<strong>Oh snap!<strong> you can\'t draw that!' // Message that will show when intersect
+                    },
+                    shapeOptions: {
+                        color: '#97009c'
+                    }
+                },
+                polygon: {
+                    allowIntersection: false, // Restricts shapes to simple polygons
+                    drawError: {
+                        color: '#e1e100', // Color the shape will turn when intersects
+                        message: '<strong>Oh snap!<strong> you can\'t draw that!' // Message that will show when intersect
+                    },
+                    shapeOptions: {
+                        color: '#97009c'
+                    }
+                },
+                // disable toolbar item by setting it to false
+                polyline: false,
+                circle: false, // Turns off this drawing tool
+                marker: true,
+                circlemarker: false
+            },
+            edit: {
+                featureGroup: editableLayers, //REQUIRED!!
+                remove: true
+            }
+
+        };
+
+        // Initialise the draw control and pass it the FeatureGroup of editable layers
+        var drawControl = new L.Control.Draw(drawPluginOptions);
+        map.addControl(drawControl);
+
+        map.on(L.Draw.Event.CREATED, function (e) {
+            var type = e.layerType,
+                layer = e.layer;
+
+            if (type === 'polygon') {
+                $("#coordinates").val(layer.getLatLngs());
+                $("#type").val(type);
+            }
+            if (type === 'rectangle') {
+                $("#coordinates").val(layer.getLatLngs());
+                $("#type").val(type);
+            }
+            if (type === 'marker') {
+                $("#coordinates").val(layer.getLatLng());
+                $("#type").val(type);
+                console.log(layer.getLatLng());
+            }
+
+            editableLayers.addLayer(layer);
+        });
+
+        $(document).ready(function () {
+            $('#sismo').DataTable();
+        });
+
+    </script>
+
