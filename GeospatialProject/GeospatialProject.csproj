@@ -185,11 +185,9 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\AllowCrossSiteAttribute.cs" />
-    <Compile Include="Models\City.cs" />
     <Compile Include="Models\Sismo.cs" />
     <Compile Include="Models\GeospatialHelper.cs" />
     <Compile Include="Models\StringHelper.cs" />
-    <Compile Include="Models\Supermarket.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
